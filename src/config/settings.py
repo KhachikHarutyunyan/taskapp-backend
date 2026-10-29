@@ -24,7 +24,6 @@ class Settings(BaseSettings):
     JWT_REFRESH_EXPIRE: int
 
     # REDIS
-    REDIS_URL: str
     REDIS_PASSWORD: str
     REDIS_HOST: str
 
@@ -41,6 +40,12 @@ class Settings(BaseSettings):
     def DATABASE_URI(self) -> str:
         password = quote_plus(self.POSTGRES_PASSWORD)
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+    
+    @computed_field
+    @property
+    def REDIS_URL(self) -> str:
+        password = quote_plus(self.REDIS_PASSWORD)
+        return f"redis://:{password}@{self.REDIS_HOST}:6379/0"
 
     @computed_field
     @property
