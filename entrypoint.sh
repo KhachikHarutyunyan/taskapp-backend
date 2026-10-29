@@ -1,3 +1,4 @@
+#!/bin/bash
 set -e
 
 wait_for_postgres() {
