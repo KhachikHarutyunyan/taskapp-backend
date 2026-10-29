@@ -13,6 +13,9 @@ on:
         required: true
         default: "stage"
         type: environment
+        oprions:
+          - stage
+          - prod
       image_tag:
         description: "Docker image tag (SHA) to deploy"
         required: true
