@@ -81,7 +81,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ env.GITOPS_REPO }}
-          token: ${{ secrets.GITOPS_BACKEND_PAT }}   # PAT with permission to write in taskapp
+          token: ${{ secrets.GHCR_PAT }}   # PAT with permission to write in taskapp
           path: gitops-repo
           ref: main
 
