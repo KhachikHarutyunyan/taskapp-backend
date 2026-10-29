@@ -18,24 +18,29 @@ while True:
 wait_for_redis() {
     echo "Waiting for Redis at $REDIS_HOST:$REDIS_PORT..."
     python3 -c "
-import socket, time
+import socket, time, os
+host = os.environ.get('REDIS_HOST', 'localhost')
+port = int(os.environ.get('REDIS_PORT', 6379))
+password = os.environ.get('REDIS_PASSWORD', '')
+
 while True:
     try:
-        s = socket.create_connection(('$REDIS_HOST', $REDIS_PORT), timeout=2)
-        # Аутентификация, если пароль задан
-        if '$REDIS_PASSWORD':
-            s.sendall(b'AUTH $REDIS_PASSWORD\r\n')
+        s = socket.create_connection((host, port), timeout=2)
+        if password:
+            s.sendall(f'AUTH {password}\r\n'.encode())
             resp = s.recv(1024)
             if b'+OK' not in resp:
-                raise Exception('Redis authentication failed')
-        # Проверка доступности
+                print('Redis auth failed. Check REDIS_PASSWORD.')
+                time.sleep(2)
+                continue
+        
         s.sendall(b'PING\r\n')
         resp = s.recv(1024)
         if b'PONG' in resp:
             s.close()
             break
-    except Exception:
-        pass
+    except Exception as e:
+        print(f'Redis connection error: {e}')
     time.sleep(2)
 " && echo "Redis is up!"
 }
