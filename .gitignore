@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+**/__pycache__/
+**/.vscode/
+**/*.py[cod]
+**/*$py.class
+
+# Environment variables
+**/.env
+**/.venv
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+
+# keys
+**/keys/*
+**/logs/*
+
+
+# caches
+**/.ruff_cache
+# /backend/__pycache__
+**/.pytest_cache/
+**/alembic/versions/__pycache__/
+__pycache__/
+**/__pycache__/
+
+**/.coverage
+**/.tox/
+
+# VS Code settings
+.vscode/
+
+# Documents
+*.doc
+*.docx
+*.pdf
+*.xls
+*.xlsx
+*.csv
+
+# Sertificates
+*.pem
+backend/**/*.pem
+
+
+# images
+backend/src/static/images/**/*
