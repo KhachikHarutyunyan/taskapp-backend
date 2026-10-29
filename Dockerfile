@@ -10,7 +10,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     POETRY_VIRTUALENVS_CREATE=false \
     POETRY_NO_INTERACTION=1
 
-RUN apt-get update && \ 
+RUN apt-get update && \
     apt-get install -y --no-install-recommends curl build-essential && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
@@ -50,8 +50,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 COPY --chown=appuser:appgroup src ./src
 COPY --chown=appuser:appgroup entrypoint.sh ./
 COPY --chown=appuser:appgroup run.py alembic.ini ./
-COPY --chown=appuser:appgroup alembic ./alembic 
-COPY --chown=appuser:appgroup logs ./logs 
+COPY --chown=appuser:appgroup alembic ./alembic  
 
 # Make entrypoint executable
 RUN chmod +x /app/entrypoint.sh
