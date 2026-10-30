@@ -48,8 +48,5 @@ while True:
 wait_for_postgres
 wait_for_redis
 
-echo "Running database migrations..."
-alembic upgrade head
-
 echo "Starting FastAPI application..."
 exec "$@"
