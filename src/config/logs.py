@@ -3,6 +3,10 @@ import logging
 import logging.config
 import time
 import traceback
+from pathlib import Path
+
+LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 
 class JsonFormatter(logging.Formatter):
@@ -113,7 +117,7 @@ logger_config = {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "INFO",
             "formatter": "json",
-            "filename": "./logs/info.log",
+            "filename": str(LOG_DIR / "info.log"),
             "maxBytes": 5 * 1024 * 1024,
             "backupCount": 5,
             "filters": ["info_filter"],
@@ -122,7 +126,7 @@ logger_config = {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "WARNING",
             "formatter": "json",
-            "filename": "./logs/warning.log",
+            "filename": str(LOG_DIR / "warning.log"),
             "maxBytes": 5 * 1024 * 1024,
             "backupCount": 5,
             "filters": ["warn_filter"],
@@ -131,7 +135,7 @@ logger_config = {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "ERROR",
             "formatter": "json",
-            "filename": "./logs/error.log",
+            "filename": str(LOG_DIR / "error.log"),
             "maxBytes": 5 * 1024 * 1024,
             "backupCount": 5,
             "filters": ["error_filter"],
@@ -140,7 +144,7 @@ logger_config = {
             "class": "logging.handlers.RotatingFileHandler",
             "level": "CRITICAL",
             "formatter": "json",
-            "filename": "./logs/critical.log",
+            "filename": str(LOG_DIR / "critical.log"),
             "maxBytes": 5 * 1024 * 1024,
             "backupCount": 5,
             "filters": ["critical_filter"],
