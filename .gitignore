@@ -4,8 +4,12 @@
 **/*.py[cod]
 **/*$py.class
 
-# Environment variables
-**/.env
+# Environment variables. Secret files stay local; committed templates are tracked.
+.env
+.env.*
+!.env.example
+!.env.test
+!.env.txt
 **/.venv
 **/*.pyc
 **/*.pyo

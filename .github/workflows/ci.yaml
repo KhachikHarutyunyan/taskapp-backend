@@ -23,7 +23,50 @@ env:
   PYTHON_VERSION: "3.12" 
 
 jobs:
+  test:
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: taskapp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d taskapp_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Poetry
+        run: pip install poetry==2.1.3
+
+      - name: Install dependencies
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry install --no-interaction --no-root
+
+      - name: Run tests
+        run: .venv/bin/pytest -c tests/pytest.ini --rootdir=.
+
   build-and-push:
+    needs: test
+    if: always() && (needs.test.result == 'success' || needs.test.result == 'skipped')
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'dev' }}
     permissions:
@@ -33,29 +76,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      # ==========================================
-      # Testing (Only for Push/PR)
-      # ==========================================
-      - name: Set up Python
-        if: github.event_name != 'workflow_dispatch'
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Poetry
-        if: github.event_name != 'workflow_dispatch'
-        run: pip install poetry==2.1.3
-
-      - name: Install dependencies
-        if: github.event_name != 'workflow_dispatch'
-        run: |
-          poetry config virtualenvs.in-project true
-          poetry install --no-interaction --no-root
-
-      - name: Run tests
-        if: github.event_name != 'workflow_dispatch'
-        run: .venv/bin/pytest -c tests/pytest.ini --rootdir=.
 
       # ==========================================
       # Build and push Docker image

@@ -1,14 +1,16 @@
-from pathlib import Path
 from urllib.parse import quote_plus
 
-from dotenv import load_dotenv
 from pydantic import computed_field
-from pydantic_settings import BaseSettings
-
-load_dotenv(override=False)
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
     # MAIN
     APP_NAME: str
     API_VERSION: str
@@ -40,7 +42,7 @@ class Settings(BaseSettings):
     def DATABASE_URI(self) -> str:
         password = quote_plus(self.POSTGRES_PASSWORD)
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{password}@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
-    
+
     @computed_field
     @property
     def REDIS_URL(self) -> str:

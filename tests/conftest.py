@@ -1,3 +1,7 @@
+# isort: off
+import tests.bootstrap_env  # noqa: F401
+# isort: on
+
 import fnmatch
 
 import pytest
