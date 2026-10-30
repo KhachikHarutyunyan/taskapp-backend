@@ -1,83 +1,73 @@
 from uuid import uuid4
-import pytest
-from sqlalchemy.future import select
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.api.utils.constants import Roles
-from src.api.account.repository import UserRepository, RolesRepository
+
+from src.api.auth.repository import UserRepository
+from src.api.task.repository import TaskRepository
+from src.core.models import User
+
 
 async def test_user_repository_crud(async_session: AsyncSession):
     repo = UserRepository(async_session)
 
-    from src.core.models import Role
-    result = await async_session.execute(select(Role).where(Role.name == Roles.WORKER.value))
-    role = result.scalar_one()
-
-    # Create
     user = await repo.create(
-        name="test", 
-        email="test@example.com", 
+        name="test",
+        email="test@example.com",
         password="hashed_password",
-        role_id=role.id
     )
     assert user.id is not None
 
-    # Read
     fetched = await repo.get(user.id)
     assert fetched.email == "test@example.com"
 
-    fake_user = await repo.get(uuid4())
-    assert fake_user is None
+    missing = await repo.get(uuid4())
+    assert missing is None
 
-    # Get by email
     user_by_email = await repo.get_by_email("test@example.com")
     assert user_by_email is not None
     assert user_by_email.name == "test"
 
-    fake_user = await repo.get_by_email("fake@mail.com")
-    assert fake_user is None
+    assert await repo.get_by_email("fake@mail.com") is None
+    assert await repo.get_by_email("TeSt@example.com") is None
 
-    fake_user = await repo.get_by_email("TeSt@example.com")
-    assert fake_user.email == "test@example.com"
-    assert fake_user.name == "test"
-
-    # Get all
     all_users = await repo.get_all()
-    assert all_users is not None
     assert all_users == [user]
 
-    # Update
-    update = await repo.update(user, email="update@mail.com")
-    assert update.email == "update@mail.com"
+    updated = await repo.update(user, email="update@mail.com")
+    assert updated.email == "update@mail.com"
 
-    # Delete
-    delete = await repo.delete(user)
-    assert delete == None
-
-async def test_role_repository_crud(async_session: AsyncSession):
-    repo = RolesRepository(async_session)
-    NAME = "New Role"
-
-    # Create
-    role = await repo.create(name=NAME)
-    assert role.id is not None
-
-    # Read
-    fetched = await repo.get(role.id)
-    assert fetched.id == role.id
-    assert fetched.name == NAME
-
-    fetched_by_name = await repo.get_by_name(NAME)
-    assert fetched_by_name.name == NAME
-
-    # Update
-    update = await repo.update(role, name="UPDATE")
-    assert update.name == "UPDATE"
-
-    # delete
-    delete = await repo.delete(role)
-    assert delete is None
+    deleted = await repo.delete(user)
+    assert deleted is None
+    assert user.deleted is True
 
 
+async def test_task_repository_crud(async_session: AsyncSession):
+    user = User(name="author", email="author@example.com", password="hashed")
+    async_session.add(user)
+    await async_session.commit()
+    await async_session.refresh(user)
 
+    repo = TaskRepository(async_session)
+    task = await repo.create(
+        name="Repo task",
+        description="Repository coverage",
+        author_id=user.id,
+    )
+    assert task.id is not None
 
+    fetched = await repo.get(task.id)
+    assert fetched.name == "Repo task"
 
+    assert await repo.get(uuid4()) is None
+
+    owned = await repo.get_user_tasks(user.id)
+    assert owned == [task]
+
+    all_tasks = await repo.get_all()
+    assert task in all_tasks
+
+    updated = await repo.update(task, name="Updated repo task")
+    assert updated.name == "Updated repo task"
+
+    await repo.delete(task)
+    assert await repo.get(task.id) is None

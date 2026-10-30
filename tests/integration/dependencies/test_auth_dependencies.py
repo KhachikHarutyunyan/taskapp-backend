@@ -1,47 +1,59 @@
+from uuid import uuid4
+
 import pytest
-from unittest.mock import MagicMock
 
-from src.api.dependencies import get_current_user, validate_refresh_token
-
+from src.api.dependencies import get_current_user, get_user_id_from_refresh_token
 from src.api.exceptions import UnauthorizedException
+from src.config.security import create_tokens
 
 
 async def test_get_current_user_valid(mock_request, mock_uow, mocker):
     mock_request.cookies = {"refresh_token": "valid_refresh_token"}
     token = "valid_access_token"
-    
-    # mocking ussed functions
+
     mocker.patch(
         "src.api.dependencies.get_token_payload",
         return_value={
             "payload": {"sub": "user_id_123"},
-            "is_expire": False
-        }
+            "is_expire": False,
+        },
     )
-    mocker.patch(
-        "src.api.dependencies.str_decode",
-        return_value="user_id_123"
-    )
-    
-    # mocking user
-    mock_user = MagicMock()
+
+    mock_user = mocker.MagicMock()
     mock_uow.user_repository.get.return_value = mock_user
-    
+
     result = await get_current_user(mock_request, token, mock_uow)
-    
+
     assert result == mock_user
     mock_uow.user_repository.get.assert_awaited_once_with("user_id_123")
 
-async def test_get_current_user_missing_refresh_token(mock_request, mock_uow):
-    mock_request.cookie = {}
+
+async def test_get_current_user_missing_token(mock_request, mock_uow):
+    with pytest.raises(UnauthorizedException) as exc:
+        await get_current_user(mock_request, None, mock_uow)
+
+    assert exc.value.detail == "Not authenticated"
+
+
+async def test_get_current_user_missing_refresh_token(mock_request, mock_uow, mocker):
+    mock_request.cookies = {}
     token = "valid_access_token"
-    
+
+    mocker.patch(
+        "src.api.dependencies.get_token_payload",
+        return_value={
+            "payload": {"sub": "user_id_123"},
+            "is_expire": False,
+        },
+    )
+
     with pytest.raises(UnauthorizedException) as exc:
         await get_current_user(mock_request, token, mock_uow)
 
     assert exc.value.detail == "Not authorized"
 
-async def test_get_current_user_expired_but_valid_refresh(mock_request, mock_uow, mocker):
+
+async def test_get_current_user_expired_access_token(mock_request, mock_uow, mocker):
     mock_request.cookies = {"refresh_token": "valid_refresh_token"}
     token = "expired_access_token"
 
@@ -49,19 +61,15 @@ async def test_get_current_user_expired_but_valid_refresh(mock_request, mock_uow
         "src.api.dependencies.get_token_payload",
         return_value={
             "payload": {"sub": "user_id_123"},
-            "is_expire": False
-        }
-    )
-    mocker.patch(
-        "src.api.dependencies.str_decode",
-        return_value="user_id_123"
+            "is_expire": True,
+        },
     )
 
-    mock_user = MagicMock()
-    mock_uow.user_repository.get.return_value = mock_user
+    with pytest.raises(UnauthorizedException) as exc:
+        await get_current_user(mock_request, token, mock_uow)
 
-    result = await get_current_user(mock_request, token, mock_uow)
-    assert result == mock_user
+    assert exc.value.detail == "Not authorized"
+
 
 async def test_get_current_user_invalid_access_token(mock_request, mock_uow, mocker):
     mock_request.cookies = {"refresh_token": "valid_refresh_token"}
@@ -71,13 +79,14 @@ async def test_get_current_user_invalid_access_token(mock_request, mock_uow, moc
         "src.api.dependencies.get_token_payload",
         return_value={
             "payload": None,
-            "is_expire": True
-        }
+            "is_expire": True,
+        },
     )
     with pytest.raises(UnauthorizedException) as exc:
         await get_current_user(mock_request, token, mock_uow)
 
     assert "Not authorized" in exc.value.detail
+
 
 async def test_get_current_user_not_found_user(mock_request, mock_uow, mocker):
     mock_request.cookies = {"refresh_token": "valid_refresh_token"}
@@ -87,12 +96,8 @@ async def test_get_current_user_not_found_user(mock_request, mock_uow, mocker):
         "src.api.dependencies.get_token_payload",
         return_value={
             "payload": {"sub": "non_existent_user_id"},
-            "is_expire": False
-        }
-    )
-    mocker.patch(
-        "src.api.dependencies.str_decode",
-        return_value=""
+            "is_expire": False,
+        },
     )
 
     mock_uow.user_repository.get.return_value = None
@@ -109,50 +114,39 @@ async def test_get_current_user_missing_sub_claim(mock_request, mock_uow, mocker
         "src.api.dependencies.get_token_payload",
         return_value={
             "payload": {},
-            "is_expire": False
-        }
+            "is_expire": False,
+        },
     )
+    mock_uow.user_repository.get.return_value = None
 
     with pytest.raises(UnauthorizedException) as exc:
         await get_current_user(mock_request, token, mock_uow)
     assert "Not authorized" in exc.value.detail
 
-# Test Validate Refresh Token
 
-async def test_validate_refresh_token(mock_request, mocker):
-    mock_request.cookies = {"refresh_token": "valid_refresh_token"}
+async def test_user_id_from_refresh_token(mock_request):
+    user_id = uuid4()
+    _, refresh_token = create_tokens(user_id)
+    mock_request.cookies = {"refresh_token": refresh_token}
 
-    mocker.patch(
-        "src.api.dependencies.get_token_payload",
-        return_value = {
-            "payload": {"sub": "user_id_123"},
-            "is_expire": False
-        }
-    )
+    result = await get_user_id_from_refresh_token(mock_request, token=None)
 
-    await validate_refresh_token(mock_request)
+    assert result == str(user_id)
 
 
-async def test_validate_refresh_token_missing(mock_request):
+async def test_user_id_from_refresh_token_missing(mock_request):
     mock_request.cookies = {}
 
     with pytest.raises(UnauthorizedException) as exc:
-        await validate_refresh_token(mock_request)
+        await get_user_id_from_refresh_token(mock_request, token=None)
 
     assert "Refresh token is missing" in exc.value.detail
 
-async def test_validate_refresh_token_invalid(mock_request, mocker):
+
+async def test_user_id_from_refresh_token_invalid(mock_request):
     mock_request.cookies = {"refresh_token": "invalid_refresh_token"}
 
-    mocker.patch(
-        "src.api.dependencies.get_token_payload",
-        return_value={
-            "payload": None,
-            "is_expire": True
-        }
-    )
-
     with pytest.raises(UnauthorizedException) as exc:
-        await validate_refresh_token(mock_request)
+        await get_user_id_from_refresh_token(mock_request, token=None)
 
     assert "Invalid refresh token" in exc.value.detail
