@@ -1,9 +1,9 @@
 from datetime import timedelta
 from uuid import UUID
 
+import jwt
 from fastapi.security import OAuth2PasswordBearer
-from jose import jwt
-from jose.exceptions import ExpiredSignatureError
+from jwt.exceptions import ExpiredSignatureError
 from passlib.context import CryptContext
 
 from src.api.utils.constants import SPECIAL_CHARACTERS
@@ -29,7 +29,10 @@ def get_token_payload(token: str, secret: str):
         return {"is_expire": False, "payload": payload}
     except ExpiredSignatureError:
         logger.warning("JWT token expired")
-        unverified = jwt.get_unverified_claims(token)
+        unverified = jwt.decode(
+            token,
+            options={"verify_signature": False, "verify_exp": False},
+        )
         return {"is_expire": True, "payload": unverified}
     except Exception as jwt_exec:
         logger.warning(f"Get token payload fail Exception: {str(jwt_exec)}")

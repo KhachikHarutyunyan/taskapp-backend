@@ -1,8 +1,10 @@
 
+import jwt
 from fastapi import Depends, Request
-from jose import JWTError, jwt, ExpiredSignatureError
-from sqlalchemy.ext.asyncio import AsyncSession
+from jwt.exceptions import ExpiredSignatureError
+from jwt.exceptions import InvalidTokenError as JWTError
 from redis import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.api.auth.service import AuthService
 from src.api.exceptions import PermissionDeniedException, UnauthorizedException
@@ -11,10 +13,10 @@ from src.api.units_of_work import (
     AuthUnitOfWork,
     TaskUnitOfWork,
 )
+from src.config.logs import logger
 from src.config.security import get_token_payload, oauth2_schema
 from src.config.settings import settings
 from src.core.database import get_session
-from src.config.logs import logger
 
 
 # Redis dependencies
