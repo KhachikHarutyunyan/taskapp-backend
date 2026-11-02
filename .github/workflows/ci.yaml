@@ -74,11 +74,9 @@ jobs:
           poetry config virtualenvs.in-project true
           poetry install --no-interaction --no-root
 
-      - name: Setup test environment
-        run: cp .env.test .env
-
       - name: Run tests
         run: .venv/bin/pytest -c tests/pytest.ini --rootdir=.
+    
 
   # ==========================================
   # Security (SAST, SCA, Secrets)
