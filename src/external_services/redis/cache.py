@@ -25,9 +25,9 @@ class CacheService:
         self.prefix = prefix
 
     def _hash_params(self, params: Dict[str, Any]) -> str:
-        """Hashing request params"""
-        param_str = json.dumps(params, sort_keys=True)
-        return hashlib.md5(param_str.encode()).hexdigest()
+        """Stable cache-key digest for request params."""
+        param_str = json.dumps(params, sort_keys=True, separators=(",", ":"))
+        return hashlib.sha256(param_str.encode("utf-8")).hexdigest()
 
     async def get(self, key: str) -> Optional[dict]:
         data = await self.redis.get(f"{self.prefix}{key}")
